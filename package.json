@@ -1,0 +1,54 @@
+{
+  "name": "ez-vault",
+  "productName": "EZ Vault",
+  "version": "1.2.1",
+  "description": "EZ Vault \u2014 a free, offline, open-source password manager by EZGGco",
+  "main": "main.js",
+  "author": "EZGGco",
+  "license": "MIT",
+  "homepage": "https://ezggco.com",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/core.test.js",
+    "dist": "electron-builder --win nsis portable",
+    "dist:dir": "electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0",
+    "@electron/fuses": "^1.8.0"
+  },
+  "build": {
+    "appId": "com.ezggco.ezvault",
+    "productName": "EZ Vault",
+    "copyright": "Copyright \u00a9 2026 EZGGco",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "EZ-Vault-${version}-${arch}-${target}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "EZ Vault",
+      "deleteAppDataOnUninstall": false
+    },
+    "asar": true,
+    "afterPack": "build/afterPack.js"
+  }
+}
