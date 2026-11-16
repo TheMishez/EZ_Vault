@@ -443,7 +443,8 @@ async function showKit(secretKey, { first = false, upgraded = false } = {}) {
 function bigLogo() {
   const svg = el('svg', { viewBox: '0 0 64 64', class: 'logo-big', 'aria-hidden': 'true' });
   svg.append(el('path', { class: 'logo-shield', d: 'M32 4 L56 12 V30 C56 45 46 55 32 60 C18 55 8 45 8 30 V12 Z' }));
-  svg.append(el('path', { class: 'logo-ez', d: 'M29 21 H19 V43 H29 M19 32 H27 M33 21 H45 L33 43 H45' }));
+  svg.append(el('path', { class: 'logo-e', d: 'M16.07 21.7 L33.03 21.7 L29.04 25.19 L20.5 25.19 L20.05 26.86 L32.71 26.86 L28.45 30.29 L19.09 30.29 L18.57 32.19 L30.05 32.19 L24.91 36.26 L12 36.26 Z' }));
+  svg.append(el('path', { class: 'logo-z', d: 'M34.23 21.7 L52 21.7 L39.26 32.19 L49.39 32.19 L44.57 36.26 L26.22 36.26 L40.59 25.19 L30.24 25.19 Z' }));
   return svg;
 }
 

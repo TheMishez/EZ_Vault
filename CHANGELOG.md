@@ -6,6 +6,7 @@
   - downloads in the background, verified with SHA-512
   - an "Update ready · Restart" badge in the title bar
   - a Settings → Updates card, with a toggle to turn it off
+- New logo: the official EZGGco **EZ** mark in a shield, used for the app icon, title bar and lock screen. The accent color now matches the official brand yellow, #FECD15.
 - The updater runs only in the main process, in its own session. The app window is still fully blocked from the network.
 
 ## 1.2.1
