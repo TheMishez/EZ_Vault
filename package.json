@@ -39,15 +39,15 @@
       "target": [
         "nsis",
         "portable"
-      ],
-      "artifactName": "EZ-Vault-${version}-${arch}-${target}.${ext}"
+      ]
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "EZ Vault",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "EZ-Vault-Setup-${version}.${ext}"
     },
     "asar": true,
     "afterPack": "build/afterPack.js",
@@ -58,7 +58,10 @@
         "repo": "EZ_Vault",
         "releaseType": "release"
       }
-    ]
+    ],
+    "portable": {
+      "artifactName": "EZ-Vault-Portable-${version}.${ext}"
+    }
   },
   "repository": {
     "type": "git",
