@@ -9,6 +9,7 @@ const { generate } = require('./src/generator');
 const totp = require('./src/totp');
 const csv = require('./src/csv');
 const backups = require('./src/backups');
+const updates = require('./src/updates');
 
 // ---------------------------------------------------------------- process hardening
 // Refuse to run with debugger / remote-debugging switches in a packaged build (stops memory-dumping tricks).
@@ -411,6 +412,16 @@ function initIpc() {
   handle('win:maximize', () => (win.isMaximized() ? win.unmaximize() : win.maximize()));
   handle('win:close', () => win.close());
   handle('app:info', () => ({ version: app.getVersion() }));
+  handle('update:get', () => updates.status());
+  handle('update:check', () => updates.check(true));
+  handle('update:setAuto', (on) => updates.setAuto(!!on));
+  handle('update:install', () => { lockVault('update'); return updates.install(); });
+  handle('update:openNotes', () => updates.openNotes());
+  handle('app:reportSecurity', () => {
+    const repo = String((require('./package.json').repository || {}).url || '').replace(/\.git$/, '').replace(/\/$/, '');
+    if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('No GitHub repository is set in package.json');
+    return shell.openExternal(repo + '/security/advisories/new');
+  });
 
   ipcMain.on('activity', (event) => { if (win && event.sender === win.webContents) lastActivity = Date.now(); });
 }
@@ -454,6 +465,7 @@ app.whenReady().then(() => {
   initIpc();
   createWindow();
   startAutoLock();
+  updates.init({ getWindow: () => win, userFile });
 });
 
 app.on('second-instance', () => {

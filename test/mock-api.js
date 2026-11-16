@@ -34,6 +34,12 @@
     copyGenerated: async () => ({ clearsIn: settings.clipboardSeconds }),
     openClipboardSettings: async () => {},
     _needsKey: (v) => { needsKey = v; },
+    reportSecurity: async () => {},
+    updateStatus: async () => ({ state: 'ready', current: '1.3.0', version: '1.3.1', percent: 100, auto: true, checkedAt: new Date().toISOString() }),
+    checkForUpdates: async () => ({ state: 'current', current: '1.3.0', auto: true, checkedAt: new Date().toISOString() }),
+    setAutoUpdate: async (on) => ({ state: 'ready', current: '1.3.0', version: '1.3.1', auto: on }),
+    installUpdate: async () => true, openReleaseNotes: async () => {},
+    onUpdate: () => {},
     resetVault: async (o) => { exists = false; return { keptCopy: o && o.wipeAll ? null : 'x' }; },
     list: async () => entries.filter((e) => !e.deletedAt).map(summary),
     trash: async () => entries.filter((e) => e.deletedAt).map((e) => ({ ...summary(e), deletedAt: e.deletedAt })),
@@ -67,7 +73,7 @@
   const raw = window.ezvault;
   const wrapped = {};
   for (const [k, fn] of Object.entries(raw)) {
-    if (typeof fn !== 'function' || ['ping', 'onWinState'].includes(k) || k.startsWith('_')) { wrapped[k] = fn; continue; }
+    if (typeof fn !== 'function' || ['ping', 'onWinState', 'onUpdate'].includes(k) || k.startsWith('_')) { wrapped[k] = fn; continue; }
     wrapped[k] = async (...a) => { try { return { ok: true, data: await fn(...a) }; } catch (e) { return { ok: false, error: e.message, code: e.code }; } };
   }
   window.ezvault = wrapped;

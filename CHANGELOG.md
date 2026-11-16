@@ -1,8 +1,18 @@
 # Changelog
 
+## 1.3.0
+- **Auto-updates from GitHub Releases:**
+  - checks on startup and every 6 hours
+  - downloads in the background, verified with SHA-512
+  - an "Update ready · Restart" badge in the title bar
+  - a Settings → Updates card, with a toggle to turn it off
+- The updater runs only in the main process, in its own session. The app window is still fully blocked from the network.
+
 ## 1.2.1
 - Fixed: the "enter your master password" box never appeared (protected items, Secret Key on a new PC, turning protections down). Error codes were being dropped by Electron's context bridge; they now pass through as plain data.
 - Master password screens explain what "bits" means.
+- Added `SECURITY.md` and a **Settings → Report a security issue** button, which opens GitHub's private vulnerability reporting.
+- The Generate button is hidden on API key items, so a real key can't be overwritten by accident.
 - "Forgot your master password? Reset EZ Vault" on the unlock screen. You confirm by typing RESET. An encrypted copy of the old vault is kept by default, or you can tick a box to wipe everything.
 
 ## 1.2.0

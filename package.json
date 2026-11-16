@@ -1,7 +1,7 @@
 {
   "name": "ez-vault",
   "productName": "EZ Vault",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "EZ Vault \u2014 a free, offline, open-source password manager by EZGGco",
   "main": "main.js",
   "author": "EZGGco",
@@ -11,7 +11,8 @@
     "start": "electron .",
     "test": "node --test test/core.test.js",
     "dist": "electron-builder --win nsis portable",
-    "dist:dir": "electron-builder --win dir"
+    "dist:dir": "electron-builder --win dir",
+    "release": "electron-builder --win nsis portable --publish always"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -49,6 +50,24 @@
       "deleteAppDataOnUninstall": false
     },
     "asar": true,
-    "afterPack": "build/afterPack.js"
+    "afterPack": "build/afterPack.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "TheMishez",
+        "repo": "EZ_Vault",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheMishez/EZ_Vault"
+  },
+  "bugs": {
+    "url": "https://github.com/TheMishez/EZ_Vault/security/advisories/new"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
   }
 }

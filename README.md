@@ -73,7 +73,7 @@ On a new PC, or after reinstalling Windows, you need your **master password and 
 - **Lock wipes everything.** Locking zeroes the keys in memory, reloads the UI to throw away any decrypted text, and forces garbage collection.
 - **Sensitive actions re-check your master password.** This covers protected items, viewing the Emergency Kit, exporting CSV, and turning protections down (streamer mode, auto-lock, clipboard clear, lock on minimize).
 - **Brute-force lockout survives restarts.** After 5 wrong attempts there's an escalating wait, up to 15 minutes.
-- **Zero network access.** All web requests are blocked at the session level, permissions are denied, and navigation, pop-ups and webviews are blocked. The UI runs sandboxed with context isolation and a strict CSP.
+- **Your vault never touches the network.** The app window's session blocks every web request, permissions are denied, and navigation, pop-ups and webviews are blocked. The UI runs sandboxed with context isolation and a strict CSP. The only network traffic is the auto-updater in the main process, which uses its own session to check and download releases from GitHub. You can turn it off in Settings.
 - **Electron fuses** are flipped in the built .exe (`build/afterPack.js`): no `ELECTRON_RUN_AS_NODE`, no `NODE_OPTIONS`, no `--inspect` debugger, and app code only loads from the packaged archive. Packaged builds also refuse to start with debugging flags and have DevTools disabled.
 
 **What no password manager can stop**
@@ -84,6 +84,32 @@ If your PC already has malware running as you (a keylogger or remote-access troj
 - Turn on BitLocker device encryption.
 - Turn off clipboard history (Settings → System → Clipboard). The Security check warns you if it's on.
 - Code-sign your release builds so nobody can swap in a fake EZ Vault.exe.
+
+## Auto-updates
+
+The installed version checks GitHub Releases on startup and every 6 hours. It downloads updates in the background and installs them when you restart, or right away from the **Update ready** badge in the title bar. You can turn this off under **Settings → Updates**.
+
+Every update is checked against the SHA-512 hash published with the release, and downgrades and pre-releases are refused. Once the .exe is code-signed, add `"publisherName": "EZGGco"` (the exact name on your certificate) under `build.win` in `package.json`. The updater will then also reject any update that isn't signed by EZGGco.
+
+Auto-update works in the **installer build** only. The portable .exe and `npm start` can't update themselves.
+
+### Publishing a release
+
+1. Bump `"version"` in `package.json`, for example `1.3.0` → `1.3.1`, and add a line to `CHANGELOG.md`.
+2. Create a GitHub token: **Settings → Developer settings → Fine-grained tokens**, limited to `TheMishez/EZ_Vault`, with **Contents: Read and write**.
+3. Build and upload:
+   ```
+   set GH_TOKEN=your_token_here
+   npm run release
+   ```
+   This creates a **draft** release on GitHub with the installer, the portable .exe, `latest.yml` and the blockmap.
+4. On GitHub, open the draft, paste the changelog and click **Publish**. Installed copies pick it up within 6 hours, or immediately with **Check now**.
+
+> The repo must be **public** for installed copies to see releases. Protect the GitHub account with 2FA, ideally a security key. Whoever controls the repo's releases controls what every user installs.
+
+## Reporting security issues
+
+Please report vulnerabilities **privately** through GitHub's private vulnerability reporting. The steps are in [SECURITY.md](SECURITY.md), or use **Settings → Report a security issue** in the app.
 
 ## Credits
 

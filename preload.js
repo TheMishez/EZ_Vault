@@ -69,6 +69,13 @@ contextBridge.exposeInMainWorld('ezvault', Object.freeze({
   maximize: () => call('win:maximize'),
   close: () => call('win:close'),
   info: () => call('app:info'),
+  reportSecurity: () => call('app:reportSecurity'),
+  updateStatus: () => call('update:get'),
+  checkForUpdates: () => call('update:check'),
+  setAutoUpdate: (on) => call('update:setAuto', on),
+  installUpdate: () => call('update:install'),
+  openReleaseNotes: () => call('update:openNotes'),
+  onUpdate: (cb) => ipcRenderer.on('update:status', (_e, d) => cb(d)),
 
   ping,
   onWinState: (cb) => ipcRenderer.on('win:state', (_e, d) => cb(d))

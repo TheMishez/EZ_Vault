@@ -6,7 +6,7 @@
 // Wraps the preload bridge: unwraps { ok, data } and turns failures into Errors that keep their .code
 // (REAUTH, BAD_PASSWORD, NEEDS_SECRET_KEY, LOCKED…). Done here because contextBridge drops .code.
 const RAW_API = window.ezvault;
-const PASSTHROUGH = new Set(['ping', 'onWinState']);
+const PASSTHROUGH = new Set(['ping', 'onWinState', 'onUpdate']);
 const api = new Proxy({}, {
   get(_t, key) {
     const fn = RAW_API[key];
@@ -249,9 +249,60 @@ async function boot() {
   wireWindow();
   ['mousemove', 'keydown', 'mousedown', 'wheel'].forEach((ev) => document.addEventListener(ev, () => api.ping(), { passive: true }));
   document.addEventListener('keydown', onGlobalKey);
+  wireUpdates();
   const reason = new URLSearchParams(location.search).get('reason');
   const st = await api.status();
   if (st.unlocked) await enterApp(); else showLock({ ...st, reason });
+}
+
+// ---------------------------------------------------------------- updates
+let UPD = null;
+function wireUpdates() {
+  api.onUpdate((u) => { const was = UPD && UPD.state; UPD = u; renderUpdateChip(); if (S.tool === 'settings' && $('upd-card')) renderUpdateCard($('upd-card')); if (u.state === 'ready' && was !== 'ready') toast(`EZ Vault ${u.version} is ready — restart to update`, 'info', 6000); });
+  api.updateStatus().then((u) => { UPD = u; renderUpdateChip(); }).catch(() => {});
+}
+function renderUpdateChip() {
+  const chip = $('tb-update');
+  const ready = UPD && UPD.state === 'ready';
+  chip.classList.toggle('hidden', !ready);
+  if (!ready) return;
+  clear(chip).append(icon('download', 13), el('span', { text: `Update ${UPD.version} ready · Restart` }));
+  chip.onclick = installUpdate;
+}
+async function installUpdate() {
+  if (!(await modal({ title: `Install EZ Vault ${UPD.version}?`, body: 'EZ Vault will lock, close, install the update and reopen. Your vault and settings are kept.', confirmText: 'Restart & update' }))) return;
+  await guard(() => api.installUpdate());
+}
+function renderUpdateCard(card) {
+  const u = UPD || { state: 'idle', current: '?' };
+  const line = {
+    dev: 'Updates only work in the installed version (not when running with npm start).',
+    portable: 'The portable version can’t update itself. Download the latest release from GitHub, or use the installer.',
+    unavailable: 'The update component is missing from this build.',
+    idle: 'Not checked yet.',
+    checking: 'Checking GitHub for updates…',
+    current: `You’re up to date${u.checkedAt ? ' · checked ' + new Date(u.checkedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}.`,
+    downloading: `Downloading ${u.version}… ${u.percent || 0}%`,
+    ready: `Version ${u.version} is downloaded and verified.`,
+    error: u.error || 'Update check failed.'
+  }[u.state] || '';
+  const canCheck = !['dev', 'portable', 'unavailable', 'checking', 'downloading', 'ready'].includes(u.state);
+  clear(card).append(
+    el('h3', {}, icon('refresh', 16), ' Updates'),
+    el('div', { class: 'set-row' },
+      el('div', {}, el('b', { text: `EZ Vault ${u.current}` }),
+        el('p', { class: 'muted upd-line' + (u.state === 'error' ? ' upd-err' : ''), text: line }),
+        u.state === 'downloading' ? el('div', { class: 'upd-bar' }, (() => { const f = el('span'); f.style.width = (u.percent || 0) + '%'; return f; })()) : null),
+      el('div', { class: 'row-gap' },
+        u.state === 'ready'
+          ? el('button', { class: 'btn btn-primary', onclick: installUpdate }, icon('download', 14), el('span', { text: 'Restart & update' }))
+          : el('button', { class: 'btn btn-ghost', disabled: canCheck ? null : 'disabled', onclick: async () => { const r = await guard(() => api.checkForUpdates()); if (r) { UPD = r; renderUpdateCard(card); } } }, icon('refresh', 14), el('span', { text: 'Check now' })),
+        ['ready', 'downloading', 'current'].includes(u.state) && u.version ? iconBtn('external', 'What’s new', () => guard(() => api.openReleaseNotes())) : null)),
+    el('div', { class: 'set-row' },
+      el('div', {}, el('b', { text: 'Check for updates automatically' }),
+        el('p', { class: 'muted', text: 'Checks GitHub on startup and every 6 hours, downloads in the background, and installs when you restart. Only the version check and download use the internet — your vault never leaves this PC.' })),
+      el('span', { class: 'switch' }, el('input', { type: 'checkbox', checked: u.auto !== false, onchange: async (e) => { const r = await guard(() => api.setAutoUpdate(e.target.checked)); if (r) { UPD = r; toast(r.auto ? 'Automatic updates on' : 'Automatic updates off'); } } }), el('span', { class: 'slider' }))),
+    el('p', { class: 'hint', text: 'Every update is verified against the checksum published with the GitHub release before it installs.' }));
 }
 
 function wireWindow() {
@@ -276,7 +327,7 @@ function showLock(st) {
   const root = clear($('lock'));
   root.classList.remove('hidden');
   $('tb-status').textContent = '';
-  const reasons = { idle: 'Locked after inactivity', minimize: 'Locked on minimize', system: 'Locked with your PC', manual: 'Vault locked', restored: 'Backup restored — unlock with its master password' };
+  const reasons = { update: 'Installing update…', idle: 'Locked after inactivity', minimize: 'Locked on minimize', system: 'Locked with your PC', manual: 'Vault locked', restored: 'Backup restored — unlock with its master password' };
 
   if (!st.exists) return showCreate(root);
 
@@ -777,6 +828,7 @@ function renderEditor(e) {
     urlRow.classList.toggle('hidden', isNote);
     totpRow.classList.toggle('hidden', isNote || isKey);
     meterSlot.classList.toggle('hidden', isKey);
+    genBtn.classList.toggle('hidden', isKey); // API keys come from the service — never generate over one
     userLabel.textContent = isKey ? 'Key ID / account (optional)' : 'Username';
     username.placeholder = isKey ? 'e.g. key name, project or account email' : 'Username or email';
     pwLabel.textContent = isKey ? 'API key / secret' : 'Password';
@@ -1014,6 +1066,7 @@ async function renderSettings() {
   const info = await api.info().catch(() => ({ version: '1.0.0' }));
   const st = await api.status().catch(() => ({}));
   const binfo = await api.backupInfo().catch(() => null);
+  UPD = await api.updateStatus().catch(() => UPD);
   const set = async (patch, msg) => {
     const r = await guard(() => withReauth((pw) => api.setSettings(patch, pw), 'This change lowers your protection. Enter your master password to confirm.'));
     if (r) { S.settings = r; if (msg) toast(msg, 'success'); }
@@ -1038,7 +1091,7 @@ async function renderSettings() {
         el('li', {}, icon('check', 14), el('span', {}, el('b', { text: 'Two-secret encryption: ' }), 'master password + 160-bit Secret Key → AES-256-GCM')),
         el('li', {}, icon('check', 14), el('span', {}, el('b', { text: 'Memory-hard key stretching: ' }), 'scrypt, 256 MB per guess')),
         el('li', { class: st.dpapi === false ? 'bad' : '' }, icon(st.dpapi === false ? 'alert' : 'check', 14), el('span', {}, el('b', { text: 'Secret Key on this PC: ' }), st.dpapi === false ? 'not protected by Windows (DPAPI unavailable)' : 'locked to your Windows account (DPAPI)')),
-        el('li', {}, icon('check', 14), el('span', {}, el('b', { text: 'Zero network access: ' }), 'EZ Vault never connects to the internet')))),
+        el('li', {}, icon('check', 14), el('span', {}, el('b', { text: 'Your vault never touches the network: ' }), 'the app window is blocked from the internet; only the update checker talks to GitHub')))),
     el('div', { class: 'card' }, el('h3', {}, icon('key', 16), ' Emergency Kit'),
       row('Secret Key', 'Needed with your master password to open your vault on a new PC or after reinstalling Windows.',
         el('button', { class: 'btn btn-ghost', onclick: async () => {
@@ -1083,6 +1136,10 @@ async function renderSettings() {
         } }, icon('alert', 14), el('span', { text: 'Export CSV' }))),
       row('Vault file', 'Your encrypted vault lives in your AppData folder.',
         el('button', { class: 'btn btn-ghost', onclick: () => api.revealFolder() }, icon('folder', 14), el('span', { text: 'Show in folder' })))),
+    (() => { const c = el('div', { class: 'card', id: 'upd-card' }); renderUpdateCard(c); return c; })(),
+    el('div', { class: 'card' }, el('h3', {}, icon('shield', 16), ' Report a security issue'),
+      row('Found a vulnerability?', 'Report it privately to EZGGco on GitHub. Reports are only visible to the EZ Vault team — please don’t post security issues publicly or include any of your real passwords.',
+        el('button', { class: 'btn btn-ghost', onclick: () => guard(() => api.reportSecurity()) }, icon('external', 14), el('span', { text: 'Report privately' })))),
     el('div', { class: 'card about' },
       bigLogo(),
       el('div', {},
